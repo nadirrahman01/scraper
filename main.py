@@ -14,6 +14,173 @@ import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
 
+
+# =========================================================
+# CRG / Cordoba Theme (UI)
+# =========================================================
+CRG = {
+    "gold": "#9A690F",
+    "gold_dark": "#7F560C",
+    "soft": "#FFF7F0",
+    "bg": "#0B0E14",
+    "panel": "#11151D",
+    "text": "#EDEDED",
+    "muted": "#9CA3AF",
+    "border": "rgba(255,255,255,0.08)",
+}
+
+st.set_page_config(
+    page_title="CRG | Email Discovery Tool",
+    page_icon="📡",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+st.markdown(
+    f"""
+<style>
+/* Base */
+.stApp {{
+  background: linear-gradient(180deg, {CRG["bg"]} 0%, #0E1117 100%);
+  color: {CRG["text"]};
+}}
+html, body, [class*="css"] {{
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+}}
+h1, h2, h3 {{
+  font-family: "Times New Roman", Times, serif;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {{
+  background-color: {CRG["panel"]};
+  border-right: 1px solid {CRG["border"]};
+}}
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {{
+  color: {CRG["text"]};
+}}
+
+/* Inputs */
+textarea, input, select {{
+  background-color: {CRG["panel"]} !important;
+  border: 1px solid {CRG["border"]} !important;
+  border-radius: 12px !important;
+}}
+div[data-baseweb="textarea"] textarea {{
+  border-radius: 12px !important;
+}}
+div[data-baseweb="input"] input {{
+  border-radius: 12px !important;
+}}
+
+/* Sliders */
+div[data-baseweb="slider"] > div > div {{
+  background-color: {CRG["gold"]} !important;
+}}
+
+/* Buttons */
+.stButton > button {{
+  background: {CRG["gold"]};
+  color: #0B0E14;
+  border: none;
+  border-radius: 12px;
+  padding: 0.55rem 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}}
+.stButton > button:hover {{
+  background: {CRG["gold_dark"]};
+  color: #ffffff;
+}}
+/* Make secondary buttons look neutral (Streamlit uses non-primary buttons as grey by default) */
+button[kind="secondary"] {{
+  background: transparent !important;
+  color: {CRG["text"]} !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  border-radius: 12px !important;
+}}
+button[kind="secondary"]:hover {{
+  background: rgba(255,255,255,0.04) !important;
+}}
+
+/* Tabs */
+button[data-baseweb="tab"] {{
+  font-weight: 600;
+  color: rgba(237,237,237,0.78) !important;
+}}
+button[data-baseweb="tab"][aria-selected="true"] {{
+  color: {CRG["gold"]} !important;
+  border-bottom: 2px solid {CRG["gold"]} !important;
+}}
+
+/* Metrics */
+div[data-testid="stMetric"] {{
+  background: rgba(255,255,255,0.03);
+  border: 1px solid {CRG["border"]};
+  border-radius: 14px;
+  padding: 10px 12px;
+}}
+
+/* Dataframes */
+div[data-testid="stDataFrame"] {{
+  border: 1px solid {CRG["border"]};
+  border-radius: 14px;
+  overflow: hidden;
+}}
+
+/* Dividers */
+hr {{
+  border-color: rgba(255,255,255,0.06);
+}}
+
+/* Small utility */
+.crg-muted {{
+  color: {CRG["muted"]};
+}}
+.crg-pill {{
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.03);
+  font-size: 12px;
+}}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+# Optional logo (won't break if missing)
+LOGO_PATHS = ["assets/cordoba_logo.svg", "assets/cordoba_logo.png", "assets/logo.svg", "assets/logo.png"]
+logo_used = False
+for p in LOGO_PATHS:
+    try:
+        st.image(p, height=48)
+        logo_used = True
+        break
+    except Exception:
+        pass
+
+st.markdown(
+    """
+<h1 style="margin-bottom:0.2rem;">CRG Email Discovery Tool</h1>
+<p class="crg-muted" style="margin-top:0;">
+Paste websites, scan, and extract public contact emails.
+<span class="crg-pill" style="margin-left:8px;">Public-source only</span>
+<span class="crg-pill" style="margin-left:6px;">Outreach-ready</span>
+</p>
+""",
+    unsafe_allow_html=True,
+)
+
+
+# =========================================================
+# Core logic (unchanged)
+# =========================================================
 EMAIL_RE = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
 
 DEFAULT_KEYWORDS = [
@@ -96,6 +263,7 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
+
 @st.cache_resource
 def get_http_session() -> requests.Session:
     session = requests.Session()
@@ -122,14 +290,17 @@ def normalise_url(u: str) -> str:
         u = "https://" + u
     return u
 
+
 def domain_of(url: str) -> str:
     try:
         return urlparse(url).netloc.lower()
     except Exception:
         return ""
 
+
 def same_domain(a: str, b: str) -> bool:
     return domain_of(a) == domain_of(b)
+
 
 def geo_hint_from_domain(dom: str) -> str:
     d = (dom or "").lower()
@@ -137,6 +308,7 @@ def geo_hint_from_domain(dom: str) -> str:
         if d.endswith(tld):
             return geo
     return "Global / Unknown"
+
 
 def safe_get(url: str, timeout: int = 15) -> Tuple[str, str]:
     session = get_http_session()
@@ -150,6 +322,7 @@ def safe_get(url: str, timeout: int = 15) -> Tuple[str, str]:
     if ("text/html" not in ctype) and ("application/xhtml" not in ctype):
         return final_url, ""
     return final_url, r.text or ""
+
 
 def guess_page_type(url: str) -> str:
     p = (urlparse(url).path or "").lower()
@@ -171,6 +344,7 @@ def guess_page_type(url: str) -> str:
         return "Homepage"
     return "Other"
 
+
 def page_text_snippet(html: str, limit_chars: int = 70000) -> str:
     if not html:
         return ""
@@ -179,6 +353,7 @@ def page_text_snippet(html: str, limit_chars: int = 70000) -> str:
         tag.decompose()
     text = " ".join((soup.get_text(" ", strip=True) or "").split())
     return text[:limit_chars]
+
 
 def extract_company_name(html: str, fallback_domain: str) -> str:
     if not html:
@@ -196,6 +371,7 @@ def extract_company_name(html: str, fallback_domain: str) -> str:
 
     return fallback_domain
 
+
 def infer_org_type(text: str) -> Tuple[str, float]:
     t = (text or "").lower()
     best = ("Corporate / Other", 0.0)
@@ -207,6 +383,7 @@ def infer_org_type(text: str) -> Tuple[str, float]:
         return best[0], 0.25
     conf = min(0.95, 0.35 + 0.12 * best[1])
     return best[0], conf
+
 
 def infer_size_proxy(signals: Dict[str, bool], text: str) -> Tuple[str, float]:
     t = (text or "").lower()
@@ -229,9 +406,11 @@ def infer_size_proxy(signals: Dict[str, bool], text: str) -> Tuple[str, float]:
         return "Mid-sized", 0.65
     return "Small", 0.55
 
+
 def sponsor_language_score(text: str) -> int:
     t = (text or "").lower()
     return sum(1 for w in SPONSOR_LANGUAGE if w in t)
+
 
 def confidence_label(pages_scanned: int, org_conf: float, size_conf: float, sponsor_lang_hits: int) -> str:
     c = 0
@@ -245,6 +424,7 @@ def confidence_label(pages_scanned: int, org_conf: float, size_conf: float, spon
         return "Medium"
     return "Low"
 
+
 def deobfuscate_text(text: str) -> str:
     if not text:
         return ""
@@ -257,6 +437,7 @@ def deobfuscate_text(text: str) -> str:
     t = re.sub(r"\s+dot\s+", ".", t, flags=re.IGNORECASE)
     t = t.replace("\u200b", "").replace("\u200c", "").replace("\u200d", "")
     return t
+
 
 def decode_cfemail(cfhex: str) -> Optional[str]:
     try:
@@ -272,6 +453,7 @@ def decode_cfemail(cfhex: str) -> Optional[str]:
     except Exception:
         return None
 
+
 def is_valid_email(email: str) -> bool:
     e = (email or "").strip()
     if not e:
@@ -282,11 +464,13 @@ def is_valid_email(email: str) -> bool:
         return False
     return bool(EMAIL_RE.fullmatch(e))
 
+
 def localpart(email: str) -> str:
     try:
         return (email.split("@", 1)[0] or "").lower()
     except Exception:
         return ""
+
 
 def classify_email_relevance(email: str) -> str:
     lp = localpart(email)
@@ -298,6 +482,7 @@ def classify_email_relevance(email: str) -> str:
         return "Medium"
     return "Medium"
 
+
 def is_trap_email(email: str) -> bool:
     lp = localpart(email)
     if lp in TRAP_LOCALPART_HINTS:
@@ -305,6 +490,7 @@ def is_trap_email(email: str) -> bool:
     if any(h in lp for h in TRAP_LOCALPART_HINTS):
         return True
     return False
+
 
 def context_score(context: str) -> int:
     c = (context or "").lower()
@@ -315,6 +501,7 @@ def context_score(context: str) -> int:
     score += 8 * sum(1 for w in strong if w in c)
     score += 4 * sum(1 for w in medium if w in c)
     return min(40, score)
+
 
 def extract_mailto_with_context(soup: BeautifulSoup, base_url: str) -> List[Dict]:
     results = []
@@ -343,6 +530,7 @@ def extract_mailto_with_context(soup: BeautifulSoup, base_url: str) -> List[Dict
         })
     return results
 
+
 def extract_cfemails(soup: BeautifulSoup) -> List[Dict]:
     results = []
     for tag in soup.find_all(attrs={"data-cfemail": True}):
@@ -357,12 +545,14 @@ def extract_cfemails(soup: BeautifulSoup) -> List[Dict]:
             })
     return results
 
+
 def extract_emails_from_html(html: str) -> Set[str]:
     if not html:
         return set()
     text = deobfuscate_text(html)
     emails = set(m.group(0) for m in EMAIL_RE.finditer(text))
     return set(e for e in emails if is_valid_email(e))
+
 
 def domain_match_bonus(email: str, domain: str) -> int:
     try:
@@ -377,6 +567,7 @@ def domain_match_bonus(email: str, domain: str) -> int:
         return 10
     return 0
 
+
 def extract_role_hints(text: str) -> str:
     t = (text or "").lower()
     hits = []
@@ -386,6 +577,7 @@ def extract_role_hints(text: str) -> str:
     hits = sorted(set(hits))
     return ", ".join(hits[:8])
 
+
 GUESS_PATHS = [
     "/partnerships", "/partners", "/partner", "/sponsorship", "/sponsor", "/sponsors",
     "/media", "/press", "/advertise", "/advertising", "/brand", "/marketing",
@@ -394,9 +586,11 @@ GUESS_PATHS = [
     "/contact/", "/about/", "/team/", "/partners/", "/partnerships/"
 ]
 
+
 def build_base(url: str) -> str:
     p = urlparse(url)
     return f"{p.scheme}://{p.netloc}"
+
 
 def guess_key_pages(base_url: str) -> List[str]:
     out = [base_url]
@@ -409,6 +603,7 @@ def guess_key_pages(base_url: str) -> List[str]:
             final.append(u)
             seen.add(u)
     return final
+
 
 def find_relevant_links(base_url: str, html: str, keywords: List[str], max_links: int = 25) -> List[str]:
     soup = BeautifulSoup(html, "html.parser")
@@ -433,6 +628,7 @@ def find_relevant_links(base_url: str, html: str, keywords: List[str], max_links
         if len(out) >= max_links:
             break
     return out
+
 
 def try_fetch_sitemap(base_url: str, timeout: int) -> List[str]:
     candidates = [
@@ -490,6 +686,7 @@ def try_fetch_sitemap(base_url: str, timeout: int) -> List[str]:
             seen.add(u)
     return out
 
+
 def sponsor_fit_score(
     email_relevance: str,
     org_type: str,
@@ -522,6 +719,7 @@ def sponsor_fit_score(
         score += 2
 
     return max(0, min(100, score))
+
 
 def reason_string(email_relevance: str, page_type: str, ctx_score: int, dom_bonus: int) -> str:
     parts = [f"{email_relevance} relevance", f"found on {page_type} page"]
@@ -826,21 +1024,16 @@ def scan_site(
         )
 
 
-# ----------------------------
-# Streamlit UI
-# ----------------------------
-
-st.set_page_config(page_title="CRG Email Scraping Tool", layout="wide")
-st.title("CRG Email Scraping Tool")
-st.caption("Paste websites, scan, and pull out public contact emails")
-
+# =========================================================
+# Streamlit UI (copy/wording upgraded, logic same)
+# =========================================================
 with st.sidebar:
     st.subheader("Scan controls")
     max_pages = st.slider("Max pages per site (cap)", 1, 40, 12)
     delay_s = st.slider("Delay between requests (seconds)", 0.0, 3.0, 0.6, 0.1)
     timeout = st.slider("Request timeout (seconds)", 5, 30, 15)
     use_sitemap = st.checkbox("Use sitemap (if available)", value=True)
-    allow_low_value = st.checkbox("Include low-value inboxes (support/careers/etc.)", value=False)
+    allow_low_value = st.checkbox("Include generic contact addresses (support/careers/etc.)", value=False)
 
     keywords = st.multiselect("Links to follow (nav crawl)", DEFAULT_KEYWORDS, DEFAULT_KEYWORDS)
 
@@ -849,7 +1042,7 @@ with st.sidebar:
     cordoba_description = st.text_area(
         "Short description",
         value="Cordoba Research Group is a student-led research and learning platform publishing macro and cross-asset notes, built to help the next generation learn how to think about markets.",
-        height=80
+        height=90
     )
     cordoba_audience = st.text_input("Audience", value="students and early-career analysts across UK and Europe")
     cordoba_unis = st.text_input("Universities", value="multi-university network (UK + Europe)")
@@ -881,17 +1074,17 @@ if "last_scan_message" not in st.session_state:
 # ----------------------------
 with tab_discover:
     st.subheader("Discover")
-    st.write("Paste target websites (one per line) and run a scan.")
+    st.write("Paste target websites (one per line) and run a discovery scan.")
 
     urls_text = st.text_area(
         "URLs",
-        height=180,
+        height=190,
         placeholder="https://example.com\nhttps://example.org\nhttps://somefirm.co.uk"
     )
 
     colA, colB, colC = st.columns([1, 1, 2])
     with colA:
-        run_scan = st.button("Run scan", type="primary")
+        run_scan = st.button("Run discovery scan", type="primary")
     with colB:
         clear = st.button("Clear results")
     with colC:
@@ -1015,7 +1208,7 @@ with tab_discover:
 # ----------------------------
 with tab_qualify:
     st.subheader("Qualify")
-    st.write("Filter the results down to the contacts that look most sponsor-relevant.")
+    st.write("Filter results down to the contacts that look most relevant for partnerships / outreach.")
 
     emails_df = st.session_state.emails_df.copy()
     if emails_df.empty:
@@ -1154,7 +1347,7 @@ with tab_outreach:
     st.markdown("### Notes")
     chosen = st.selectbox("Select a company", notes_df["company"].tolist())
     chosen_row = notes_df[notes_df["company"] == chosen].iloc[0]
-    st.text_area("Outreach notes (copy/paste)", value=chosen_row["outreach_notes"], height=340)
+    st.text_area("Outreach notes (copy/paste)", value=chosen_row["outreach_notes"], height=360)
 
     st.markdown("### Export")
     out_csv = notes_df.to_csv(index=False).encode("utf-8")
@@ -1162,4 +1355,4 @@ with tab_outreach:
 
 
 st.markdown("---")
-st.caption("For internal testing. Always double-check emails before using them.")
+st.caption("CRG internal tooling. Always double-check emails before using them.")
