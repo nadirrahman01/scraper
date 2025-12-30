@@ -826,7 +826,7 @@ def scan_site(
 with st.sidebar:
     if LOGO_PATH.exists():
         st.markdown("<div class='crg-sidebar-logo'>", unsafe_allow_html=True)
-        st.image(str(LOGO_PATH), use_container_width=True)
+        st.image(str(LOGO_PATH), width=140)  # try 120–170
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='crg-sidebar-box'>", unsafe_allow_html=True)
