@@ -154,25 +154,6 @@ hr {{
     unsafe_allow_html=True,
 )
 
-# --- Logo (Cordoba) ---
-LOGO_PATHS = [
-    "assets/Cordoba Capital Logo (500 x 200 px) (3).png",
-    "assets/cordoba_logo.png",
-    "assets/cordoba_logo.svg",
-    "assets/logo.png",
-    "assets/logo.svg",
-]
-
-logo_used = False
-for p in LOGO_PATHS:
-    if os.path.exists(p):
-        st.image(p, height=52)  # slightly bigger so it reads well
-        logo_used = True
-        break
-
-if not logo_used:
-    st.caption("Logo not found. Put your logo inside /assets and update LOGO_PATHS.")
-
 st.markdown(
     """
 <h1 style="margin-bottom:0.2rem;">CRG Email Discovery Tool</h1>
