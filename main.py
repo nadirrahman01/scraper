@@ -275,11 +275,7 @@ hr {{
 # =========================================================
 BASE_DIR = Path(__file__).resolve().parent
 LOGO_PATHS = [
-    BASE_DIR / "assets" / "Cordoba Capital Logo (500 x 200 px) (3).png",
-    BASE_DIR / "assets" / "cordoba_logo.png",
-    BASE_DIR / "assets" / "cordoba_logo.svg",
-    BASE_DIR / "assets" / "logo.png",
-    BASE_DIR / "assets" / "logo.svg",
+    BASE_DIR / "assets/Cordoba Capital Logo (500 x 200 px) (2).png",
 ]
 logo_path = next((p for p in LOGO_PATHS if p.exists()), None)
 
