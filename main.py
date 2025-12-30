@@ -7,6 +7,9 @@ from typing import Dict, List, Set, Tuple, Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
@@ -86,9 +89,31 @@ TLD_GEO = {
 
 COMMON_FILE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".pdf", ".css", ".js", ".ico")
 
+# More realistic headers (reduces basic bot blocks)
 HEADERS = {
-    "User-Agent": "CRGEmailScrapingTool/1.0 (+public research)"
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Connection": "keep-alive",
 }
+
+# ---- Requests session with retries (fixes flakiness / 429 / transient 5xx)
+@st.cache_resource
+def get_http_session() -> requests.Session:
+    session = requests.Session()
+    retry = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        backoff_factor=0.7,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=("GET",),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=20, pool_maxsize=20)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
 
 
 def normalise_url(u: str) -> str:
@@ -116,11 +141,22 @@ def geo_hint_from_domain(dom: str) -> str:
     return "Global / Unknown"
 
 def safe_get(url: str, timeout: int = 15) -> Tuple[str, str]:
-    r = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
-    r.raise_for_status()
+    """
+    Robust fetch:
+    - uses session + retries
+    - returns final_url + html text (or "" if not html)
+    - raises with readable reason when blocked / not reachable
+    """
+    session = get_http_session()
+    r = session.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
+
+    # Explicitly raise on common hard blocks so we can surface them in the UI
+    if r.status_code >= 400:
+        raise requests.HTTPError(f"HTTP {r.status_code} for {url} (final: {r.url})")
+
     final_url = r.url
     ctype = (r.headers.get("Content-Type", "") or "").lower()
-    if "text/html" not in ctype and "application/xhtml" not in ctype and "text/xml" not in ctype and "application/xml" not in ctype:
+    if ("text/html" not in ctype) and ("application/xhtml" not in ctype):
         return final_url, ""
     return final_url, r.text or ""
 
@@ -218,7 +254,6 @@ def confidence_label(pages_scanned: int, org_conf: float, size_conf: float, spon
         return "Medium"
     return "Low"
 
-
 def deobfuscate_text(text: str) -> str:
     if not text:
         return ""
@@ -280,6 +315,16 @@ def is_trap_email(email: str) -> bool:
         return True
     return False
 
+def context_score(context: str) -> int:
+    c = (context or "").lower()
+    score = 0
+    strong = ["partnership", "partners", "sponsor", "sponsorship", "brand", "marketing",
+              "media kit", "press", "advertis", "investor relations", "institutional"]
+    medium = ["contact", "enquiry", "inquiry", "collaborat", "work with us", "business development", "biz dev"]
+    score += 8 * sum(1 for w in strong if w in c)
+    score += 4 * sum(1 for w in medium if w in c)
+    return min(40, score)
+
 def extract_mailto_with_context(soup: BeautifulSoup, base_url: str) -> List[Dict]:
     results = []
     for a in soup.find_all("a", href=True):
@@ -328,16 +373,6 @@ def extract_emails_from_html(html: str) -> Set[str]:
     emails = set(m.group(0) for m in EMAIL_RE.finditer(text))
     return set(e for e in emails if is_valid_email(e))
 
-def context_score(context: str) -> int:
-    c = (context or "").lower()
-    score = 0
-    strong = ["partnership", "partners", "sponsor", "sponsorship", "brand", "marketing",
-              "media kit", "press", "advertis", "investor relations", "institutional"]
-    medium = ["contact", "enquiry", "inquiry", "collaborat", "work with us", "business development", "biz dev"]
-    score += 8 * sum(1 for w in strong if w in c)
-    score += 4 * sum(1 for w in medium if w in c)
-    return min(40, score)
-
 def domain_match_bonus(email: str, domain: str) -> int:
     try:
         ed = email.split("@", 1)[1].lower()
@@ -364,7 +399,9 @@ GUESS_PATHS = [
     "/partnerships", "/partners", "/partner", "/sponsorship", "/sponsor", "/sponsors",
     "/media", "/press", "/advertise", "/advertising", "/brand", "/marketing",
     "/contact", "/contact-us", "/about", "/about-us", "/team", "/people",
-    "/investor-relations", "/ir", "/institutional", "/corporate"
+    "/investor-relations", "/ir", "/institutional", "/corporate",
+    # WordPress-friendly variants
+    "/contact/", "/about/", "/team/", "/partners/", "/partnerships/"
 ]
 
 def build_base(url: str) -> str:
@@ -462,7 +499,6 @@ def try_fetch_sitemap(base_url: str, timeout: int) -> List[str]:
             out.append(u)
             seen.add(u)
     return out
-
 
 def sponsor_fit_score(
     email_relevance: str,
@@ -605,6 +641,9 @@ def scan_site(
     found_rows: List[Dict] = []
     visited: Set[str] = set()
 
+    # NEW: collect fetch errors so you can see what happened
+    fetch_errors: List[str] = []
+
     try:
         final_url, home_html = safe_get(start_url, timeout=timeout)
         pages_scanned += 1
@@ -704,7 +743,8 @@ def scan_site(
                         "domain_bonus": dom_bonus
                     })
 
-            except Exception:
+            except Exception as e:
+                fetch_errors.append(f"{url} -> {str(e)[:180]}")
                 continue
 
         org_type, org_conf = infer_org_type(all_text)
@@ -754,6 +794,10 @@ def scan_site(
         emails_final = list(dedup.values())
         emails_final.sort(key=lambda x: x["sponsor_fit_score"], reverse=True)
 
+        # NEW: surface some fetch errors if we got blocked
+        if fetch_errors:
+            errors = "; ".join(fetch_errors[:3])  # keep it short
+
         return ScanResult(
             input_url=start_url,
             final_url=final_url,
@@ -778,7 +822,7 @@ def scan_site(
         geo_hint = geo_hint_from_domain(dom)
         return ScanResult(
             input_url=start_url,
-            final_url=final_url,
+            final_url=start_url,
             domain=dom,
             company=dom,
             pages_scanned=pages_scanned,
@@ -936,19 +980,23 @@ with tab_discover:
         st.session_state.companies_df = companies_df
         st.session_state.emails_df = emails_df
 
-        st.success("Done. Use Qualify to filter down to the best contacts.")
+        if emails_df.empty:
+            st.warning("Scan completed, but no emails were found (or pages were blocked). Check the errors column below.")
+        else:
+            st.success("Done. Use Qualify to filter down to the best contacts.")
 
-    if not st.session_state.emails_df.empty:
+    # ✅ FIX: Always show scan snapshot + companies table if we scanned anything
+    if not st.session_state.companies_df.empty:
         st.markdown("### Scan snapshot")
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.metric("Domains scanned", int(st.session_state.companies_df.shape[0]))
         with c2:
-            st.metric("Emails kept", int(st.session_state.emails_df.shape[0]))
+            st.metric("Emails kept", int(st.session_state.emails_df.shape[0]) if not st.session_state.emails_df.empty else 0)
         with c3:
-            st.metric("High relevance", int((st.session_state.emails_df["email_relevance"] == "High").sum()))
+            st.metric("High relevance", int((st.session_state.emails_df["email_relevance"] == "High").sum()) if not st.session_state.emails_df.empty else 0)
         with c4:
-            st.metric("Score ≥ 70", int((st.session_state.emails_df["sponsor_fit_score"] >= 70).sum()))
+            st.metric("Score ≥ 70", int((st.session_state.emails_df["sponsor_fit_score"] >= 70).sum()) if not st.session_state.emails_df.empty else 0)
 
         st.dataframe(
             st.session_state.companies_df.sort_values(["errors", "sponsor_language_hits"], ascending=[True, False]),
@@ -966,7 +1014,7 @@ with tab_qualify:
 
     emails_df = st.session_state.emails_df.copy()
     if emails_df.empty:
-        st.info("Run a scan in Discover first.")
+        st.info("No emails found yet. Go back to Discover and check the errors column (some sites block scanning).")
         st.stop()
 
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
