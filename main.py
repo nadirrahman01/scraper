@@ -154,8 +154,7 @@ hr {{
     unsafe_allow_html=True,
 )
 
-# Optional logo (won't break if missing)
-LOGO_PATHS = ["assets/cordoba_logo.svg", "assets/cordoba_logo.png", "assets/logo.svg", "assets/logo.png"]
+LOGO_PATHS = ["assets/Cordoba Capital Logo (500 x 200 px) (2).png"]
 logo_used = False
 for p in LOGO_PATHS:
     try:
