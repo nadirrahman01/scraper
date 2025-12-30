@@ -154,15 +154,24 @@ hr {{
     unsafe_allow_html=True,
 )
 
-LOGO_PATHS = ["assets/Cordoba Capital Logo (500 x 200 px) (2).png"]
+# --- Logo (Cordoba) ---
+LOGO_PATHS = [
+    "assets/Cordoba Capital Logo (500 x 200 px) (3).png",
+    "assets/cordoba_logo.png",
+    "assets/cordoba_logo.svg",
+    "assets/logo.png",
+    "assets/logo.svg",
+]
+
 logo_used = False
 for p in LOGO_PATHS:
-    try:
-        st.image(p, height=48)
+    if os.path.exists(p):
+        st.image(p, height=52)  # slightly bigger so it reads well
         logo_used = True
         break
-    except Exception:
-        pass
+
+if not logo_used:
+    st.caption("Logo not found. Put your logo inside /assets and update LOGO_PATHS.")
 
 st.markdown(
     """
