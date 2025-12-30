@@ -882,6 +882,10 @@ if "companies_df" not in st.session_state:
     st.session_state.companies_df = pd.DataFrame()
 if "shortlist_df" not in st.session_state:
     st.session_state.shortlist_df = pd.DataFrame()
+if "has_scanned" not in st.session_state:
+    st.session_state.has_scanned = False
+if "last_scan_message" not in st.session_state:
+    st.session_state.last_scan_message = ""
 
 
 # ----------------------------
@@ -905,11 +909,13 @@ with tab_discover:
     with colC:
         st.caption("Tip: start with a curated list (funds, banks, fintechs, consultancies, data providers).")
 
-    if clear:
-        st.session_state.emails_df = pd.DataFrame()
-        st.session_state.companies_df = pd.DataFrame()
-        st.session_state.shortlist_df = pd.DataFrame()
-        st.success("Cleared.")
+if clear:
+    st.session_state.emails_df = pd.DataFrame()
+    st.session_state.companies_df = pd.DataFrame()
+    st.session_state.shortlist_df = pd.DataFrame()
+    st.session_state.has_scanned = False
+    st.session_state.last_scan_message = ""
+    st.success("Cleared.")
 
     if run_scan:
         raw_urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
@@ -977,8 +983,13 @@ with tab_discover:
         companies_df = pd.DataFrame(all_company_rows).drop_duplicates(subset=["domain"])
         emails_df = pd.DataFrame(all_email_rows)
 
-        st.session_state.companies_df = companies_df
-        st.session_state.emails_df = emails_df
+        st.session_state.has_scanned = True
+        
+        if emails_df.empty:
+            st.session_state.last_scan_message = "Scan completed, but no emails were found (or pages were blocked). Check the errors column."
+        else:
+            st.session_state.last_scan_message = "Done. Use Qualify to filter down to the best contacts."
+
 
         if emails_df.empty:
             st.warning("Scan completed, but no emails were found (or pages were blocked). Check the errors column below.")
