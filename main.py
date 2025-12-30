@@ -166,7 +166,7 @@ section[data-testid="stSidebar"] .block-container {{
 
 /* Sidebar logo (crisp, no gaps) */
 :root {{
-  --crg-logo-h: 44px;               /* change to 44px / 48px if you want tighter */
+  --crg-logo-h: 30px;
 }}
 .crg-sidebar-logo {{
   margin: 0 0 12px 0 !important;
