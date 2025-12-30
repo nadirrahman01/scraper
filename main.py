@@ -16,7 +16,7 @@ from urllib3.util.retry import Retry
 
 
 # =========================================================
-# Cordoba / CRG Brand (Light)
+# Brand
 # =========================================================
 CRG = {
     "gold": "#9A690F",
@@ -24,8 +24,8 @@ CRG = {
     "bg": "#FFF7F0",
     "card": "#FFFFFF",
     "ink": "#0B0E14",
-    "muted": "rgba(11,14,20,0.66)",
-    "muted2": "rgba(11,14,20,0.52)",
+    "muted": "rgba(11,14,20,0.62)",
+    "muted2": "rgba(11,14,20,0.46)",
     "border": "rgba(11,14,20,0.10)",
     "border2": "rgba(11,14,20,0.14)",
     "shadow": "0 18px 45px rgba(11,14,20,0.08)",
@@ -39,88 +39,106 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
 # =========================================================
-# Global CSS: make it look like a Cordoba web app
+# CSS — clean, consistent, no “pill bars”
 # =========================================================
 st.markdown(
     f"""
 <style>
-/* Hide Streamlit chrome */
+/* ---- kill Streamlit chrome ---- */
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 header {{ visibility: hidden; }}
 [data-testid="stToolbar"] {{ visibility: hidden; height: 0px; }}
 [data-testid="stDecoration"] {{ display: none; }}
-[data-testid="stStatusWidget"] {{ visibility:hidden; }}
+[data-testid="stStatusWidget"] {{ visibility: hidden; }}
 
-/* Base */
+/* ---- base ---- */
 .stApp {{
   background: {CRG["bg"]};
   color: {CRG["ink"]};
 }}
 .block-container {{
-  padding-top: 22px;
+  padding-top: 26px;
   padding-bottom: 44px;
-  max-width: 1180px;
+  max-width: 1160px;
 }}
+
+/* ---- typography system ---- */
 html, body, [class*="css"] {{
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
   color: {CRG["ink"]} !important;
+  font-weight: 400;
 }}
-
-/* Typography */
 h1, h2, h3 {{
   font-family: "Times New Roman", Times, serif;
-  font-weight: 650;
+  color: {CRG["ink"]} !important;
+  font-weight: 650 !important;
   letter-spacing: 0.2px;
-  color: {CRG["ink"]};
-  margin-bottom: 6px;
+  margin: 0 0 6px 0 !important;
+}}
+/* Uniform section headings */
+.crg-h1 {{
+  font-family: "Times New Roman", Times, serif;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.05;
+  margin: 0;
+}}
+.crg-sub {{
+  font-size: 14px;
+  line-height: 1.45;
+  color: {CRG["muted"]};
+  margin-top: 6px;
+}}
+.crg-section-title {{
+  font-family: "Times New Roman", Times, serif;
+  font-size: 34px;
+  font-weight: 650;
+  margin: 0 0 6px 0;
+}}
+.crg-section-sub {{
+  font-size: 14px;
+  color: {CRG["muted"]};
+  margin: 0 0 14px 0;
 }}
 
-/* FORCE all label/help/caption text to be readable */
-label, label span, .stMarkdown, .stTextInput label, .stTextArea label,
-.stSelectbox label, .stMultiSelect label, .stSlider label, .stCheckbox label {{
+/* ---- force readable labels + help ---- */
+label, [data-testid="stWidgetLabel"] > div {{
   color: {CRG["ink"]} !important;
   font-weight: 650 !important;
 }}
-small, .stCaption, .stHelp, [data-testid="stCaptionContainer"], [data-testid="stWidgetLabel"] + div {{
+.stCaption, [data-testid="stCaptionContainer"], small {{
   color: {CRG["muted"]} !important;
 }}
-/* Streamlit often renders "help" text as very faint; override it */
-div[data-testid="stMarkdownContainer"] p {{
-  color: {CRG["ink"]};
-}}
-/* Placeholder text slightly muted but still visible */
 textarea::placeholder, input::placeholder {{
   color: {CRG["muted2"]} !important;
   opacity: 1 !important;
 }}
 
-/* Card system */
+/* ---- cards ---- */
 .crg-card {{
   background: {CRG["card"]};
   border: 1px solid {CRG["border"]};
   border-radius: 18px;
-  box-shadow: {CRG["shadow"]};
-  padding: 18px 18px;
-}}
-.crg-card.soft {{
   box-shadow: {CRG["shadow_soft"]};
+  padding: 18px;
 }}
-.crg-header-title {{
-  font-family: "Times New Roman", Times, serif;
-  font-size: 44px;
-  font-weight: 750;
-  line-height: 1.05;
-  margin: 0;
-}}
-.crg-subtitle {{
-  margin-top: 6px;
-  font-size: 14px;
-  color: {CRG["muted"]};
+.crg-card-strong {{
+  box-shadow: {CRG["shadow"]};
 }}
 
-/* Sidebar */
+/* ---- remove those unwanted “blank pill bars” ----
+   Some Streamlit elements render empty blocks; ensure they have no borders/background.
+*/
+div:empty {{
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}}
+
+/* ---- sidebar ---- */
 section[data-testid="stSidebar"] {{
   background: {CRG["bg"]};
   border-right: 1px solid rgba(11,14,20,0.06);
@@ -128,35 +146,45 @@ section[data-testid="stSidebar"] {{
 section[data-testid="stSidebar"] .block-container {{
   padding-top: 18px;
 }}
-.crg-sidebar-card {{
+.crg-sidebar-box {{
   background: {CRG["card"]};
   border: 1px solid {CRG["border"]};
   border-radius: 18px;
   box-shadow: {CRG["shadow_soft"]};
   padding: 16px;
 }}
+/* sidebar logo spacing */
+.crg-sidebar-logo {{
+  margin-bottom: 12px;
+}}
 
-/* Inputs */
+/* ---- inputs ---- */
 textarea, input {{
   background: {CRG["card"]} !important;
   border: 1px solid {CRG["border2"]} !important;
   border-radius: 14px !important;
   color: {CRG["ink"]} !important;
 }}
-div[data-baseweb="textarea"] textarea {{ border-radius: 14px !important; }}
-div[data-baseweb="input"] input {{ border-radius: 14px !important; }}
+div[data-baseweb="textarea"] textarea {{
+  border-radius: 14px !important;
+}}
+div[data-baseweb="input"] input {{
+  border-radius: 14px !important;
+}}
 
-/* Buttons */
+/* ---- buttons (Cordoba gold) ---- */
 .stButton > button {{
   background: {CRG["gold"]};
   color: white;
   border: none;
   border-radius: 14px;
-  padding: 0.65rem 1.05rem;
+  padding: 0.66rem 1.05rem;
   font-weight: 800;
   box-shadow: 0 12px 25px rgba(154,105,15,0.18);
 }}
-.stButton > button:hover {{ background: {CRG["gold_dark"]}; }}
+.stButton > button:hover {{
+  background: {CRG["gold_dark"]};
+}}
 button[kind="secondary"] {{
   background: white !important;
   color: {CRG["ink"]} !important;
@@ -165,11 +193,13 @@ button[kind="secondary"] {{
   font-weight: 750 !important;
   box-shadow: 0 10px 20px rgba(11,14,20,0.06) !important;
 }}
-button[kind="secondary"]:hover {{ background: rgba(11,14,20,0.02) !important; }}
+button[kind="secondary"]:hover {{
+  background: rgba(11,14,20,0.02) !important;
+}}
 
-/* Tabs */
+/* ---- tabs ---- */
 button[data-baseweb="tab"] {{
-  font-weight: 800;
+  font-weight: 800 !important;
   color: rgba(11,14,20,0.70) !important;
 }}
 button[data-baseweb="tab"][aria-selected="true"] {{
@@ -177,7 +207,7 @@ button[data-baseweb="tab"][aria-selected="true"] {{
   border-bottom: 2px solid {CRG["gold"]} !important;
 }}
 
-/* Sliders: gold track, black numbers */
+/* ---- sliders: gold track, black numbers ---- */
 div[data-baseweb="slider"] [role="slider"] {{
   background: {CRG["gold"]} !important;
   border-color: {CRG["gold"]} !important;
@@ -188,7 +218,7 @@ div[data-baseweb="slider"] span {{
   font-weight: 750 !important;
 }}
 
-/* Multiselect: remove dark blob, clean chips */
+/* ---- multiselect: clean chips ---- */
 div[data-baseweb="select"] > div {{
   background: {CRG["card"]} !important;
   border: 1px solid {CRG["border2"]} !important;
@@ -210,10 +240,14 @@ ul[role="listbox"] {{
   border-radius: 14px !important;
   box-shadow: {CRG["shadow_soft"]} !important;
 }}
-ul[role="listbox"] li {{ color: {CRG["ink"]} !important; }}
-ul[role="listbox"] li:hover {{ background: rgba(11,14,20,0.03) !important; }}
+ul[role="listbox"] li {{
+  color: {CRG["ink"]} !important;
+}}
+ul[role="listbox"] li:hover {{
+  background: rgba(11,14,20,0.03) !important;
+}}
 
-/* Tables */
+/* ---- tables ---- */
 div[data-testid="stDataFrame"] {{
   border: 1px solid {CRG["border"]};
   border-radius: 16px;
@@ -221,43 +255,20 @@ div[data-testid="stDataFrame"] {{
   background: {CRG["card"]};
   box-shadow: {CRG["shadow_soft"]};
 }}
-div[data-testid="stAlert"] {{ border-radius: 16px; }}
+div[data-testid="stAlert"] {{
+  border-radius: 16px;
+}}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
+
 # =========================================================
-# Header (no extra pills, no junk)
+# Logo (sidebar, above Scan controls)
 # =========================================================
 BASE_DIR = Path(__file__).resolve().parent
-LOGO_PATHS = [
-    BASE_DIR / "assets" / "Cordoba Capital Logo (500 x 200 px) (3).png",
-    BASE_DIR / "assets" / "cordoba_logo.png",
-    BASE_DIR / "assets" / "logo.png",
-    BASE_DIR / "assets" / "cordoba_logo.jpg",
-    BASE_DIR / "assets" / "logo.jpg",
-]
-logo_path = next((p for p in LOGO_PATHS if p.exists()), None)
-
-st.markdown("<div class='crg-card soft'>", unsafe_allow_html=True)
-hc1, hc2 = st.columns([1, 6], vertical_alignment="center")
-with hc1:
-    if logo_path:
-        st.image(str(logo_path), use_container_width=True)
-with hc2:
-    st.markdown(
-        """
-        <div style="padding-left:6px;">
-          <div class="crg-header-title">CRG Email Discovery</div>
-          <div class="crg-subtitle">Paste websites, scan, and extract public contact emails.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
+LOGO_PATH = BASE_DIR / "assets" / "Cordoba Capital Logo (500 x 200 px) (2).png"
 
 
 # =========================================================
@@ -281,10 +292,10 @@ HIGH_VALUE_HINTS = [
 MEDIUM_VALUE_HINTS = ["info", "hello", "contact", "enquiries", "inquiries", "connect"]
 LOW_VALUE_HINTS = ["support", "help", "careers", "jobs", "hr", "webmaster", "privacy", "legal", "security", "abuse", "dpo"]
 
-TRAP_LOCALPART_HINTS = set([
+TRAP_LOCALPART_HINTS = {
     "abuse", "security", "privacy", "legal", "webmaster", "postmaster",
     "mailer-daemon", "noreply", "no-reply", "donotreply"
-])
+}
 
 ORG_TYPE_KEYWORDS = {
     "Asset Manager": ["asset management", "investment management", "aum", "fund", "funds", "portfolio"],
@@ -687,8 +698,7 @@ def scan_site(
         dom = domain_of(final_url) or dom
 
         company = extract_company_name(home_html, dom)
-        home_text = page_text_snippet(home_html)
-        all_text += " " + home_text
+        all_text += " " + page_text_snippet(home_html)
 
         targets = guess_key_pages(base)
         if home_html:
@@ -724,13 +734,11 @@ def scan_site(
                 if not html:
                     continue
 
-                txt = page_text_snippet(html)
-                all_text += " " + txt
+                all_text += " " + page_text_snippet(html)
 
                 soup = BeautifulSoup(html, "html.parser")
                 rows = extract_cfemails(soup) + extract_mailto_with_context(soup)
-                emails = extract_emails_from_html(html)
-                for e in emails:
+                for e in extract_emails_from_html(html):
                     rows.append({"email": e, "context": ""})
 
                 pt = guess_page_type(url)
@@ -776,7 +784,10 @@ def scan_site(
                     dedup[key] = row
 
         emails_final = list(dedup.values())
-        emails_final.sort(key=lambda x: (rel_rank.get(x["relevance"], 1), page_rank.get(x["page_type"], 0)), reverse=True)
+        emails_final.sort(
+            key=lambda x: (rel_rank.get(x["relevance"], 1), page_rank.get(x["page_type"], 0)),
+            reverse=True
+        )
 
         if fetch_errors:
             errors = "; ".join(fetch_errors[:3])
@@ -795,28 +806,30 @@ def scan_site(
         )
 
     except Exception as e:
-        errors = str(e)
-        org_type, org_conf = "Corporate / Other", 0.2
-        geo_hint = geo_hint_from_domain(dom)
         return ScanResult(
             input_url=start_url,
             final_url=start_url,
             domain=dom,
             company=dom,
             pages_scanned=pages_scanned,
-            org_type=org_type,
-            org_conf=org_conf,
-            geo_hint=geo_hint,
-            errors=errors,
+            org_type="Corporate / Other",
+            org_conf=0.2,
+            geo_hint=geo_hint_from_domain(dom),
+            errors=str(e),
             emails=[]
         )
 
 
 # =========================================================
-# Sidebar
+# Sidebar (logo on top, then controls)
 # =========================================================
 with st.sidebar:
-    st.markdown("<div class='crg-sidebar-card'>", unsafe_allow_html=True)
+    if LOGO_PATH.exists():
+        st.markdown("<div class='crg-sidebar-logo'>", unsafe_allow_html=True)
+        st.image(str(LOGO_PATH), use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='crg-sidebar-box'>", unsafe_allow_html=True)
     st.markdown("### Scan controls")
     max_pages = st.slider("Max pages per site", 1, 40, 12)
     delay_s = st.slider("Delay between requests (seconds)", 0.0, 3.0, 0.6, 0.1)
@@ -843,18 +856,30 @@ if "last_scan_message" not in st.session_state:
 
 
 # =========================================================
-# Tabs
+# Main header (NO cards, NO pills)
 # =========================================================
+st.markdown(
+    """
+<div>
+  <div class="crg-h1">CRG Email Discovery</div>
+  <div class="crg-sub">Paste websites, scan, and extract public contact emails.</div>
+</div>
+""",
+    unsafe_allow_html=True
+)
+
+st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
+
 tab_discover, tab_qualify = st.tabs(["Discover", "Qualify"])
 
 
-# ----------------------------
+# =========================================================
 # Discover
-# ----------------------------
+# =========================================================
 with tab_discover:
-    st.markdown("<div class='crg-card'>", unsafe_allow_html=True)
-    st.markdown("## Discover")
-    st.markdown(f"<div class='crg-subtitle'>Paste target websites (one per line) and run a scan.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='crg-card crg-card-strong'>", unsafe_allow_html=True)
+    st.markdown("<div class='crg-section-title'>Discover</div>", unsafe_allow_html=True)
+    st.markdown("<div class='crg-section-sub'>Paste target websites (one per line) and run a scan.</div>", unsafe_allow_html=True)
 
     urls_text = st.text_area(
         "URLs",
@@ -862,12 +887,12 @@ with tab_discover:
         placeholder="https://example.com\nhttps://example.org\nhttps://somefirm.co.uk"
     )
 
-    b1, b2, b3 = st.columns([1, 1, 2])
-    with b1:
+    c1, c2, c3 = st.columns([1, 1, 2])
+    with c1:
         run_scan = st.button("Run scan", type="primary")
-    with b2:
+    with c2:
         clear = st.button("Clear", type="secondary")
-    with b3:
+    with c3:
         st.caption("Tip: start with a curated list (funds, banks, fintechs, consultancies, data providers).")
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -941,21 +966,24 @@ with tab_discover:
     if st.session_state.has_scanned:
         st.info(st.session_state.last_scan_message)
 
-        st.markdown("<div class='crg-card soft'>", unsafe_allow_html=True)
+        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='crg-card'>", unsafe_allow_html=True)
         st.markdown("### Snapshot")
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
             st.metric("Domains scanned", int(st.session_state.companies_df.shape[0]) if not st.session_state.companies_df.empty else 0)
-        with c2:
+        with m2:
             st.metric("Emails found", int(st.session_state.emails_df.shape[0]) if not st.session_state.emails_df.empty else 0)
-        with c3:
+        with m3:
             st.metric("High relevance", int((st.session_state.emails_df["email_relevance"] == "High").sum()) if not st.session_state.emails_df.empty else 0)
-        with c4:
+        with m4:
             st.metric("Blocked / errors", int((st.session_state.companies_df["errors"].astype(str).str.len() > 0).sum()) if not st.session_state.companies_df.empty else 0)
         st.markdown("</div>", unsafe_allow_html=True)
 
         if not st.session_state.companies_df.empty:
-            st.markdown("<div class='crg-card soft'>", unsafe_allow_html=True)
+            st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div class='crg-card'>", unsafe_allow_html=True)
             st.markdown("### Sites")
             st.dataframe(
                 st.session_state.companies_df.sort_values(["errors", "pages_scanned"], ascending=[True, False]),
@@ -965,23 +993,20 @@ with tab_discover:
             st.markdown("</div>", unsafe_allow_html=True)
 
         if not st.session_state.emails_df.empty:
-            st.markdown("<div class='crg-card soft'>", unsafe_allow_html=True)
+            st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div class='crg-card'>", unsafe_allow_html=True)
             st.markdown("### Emails")
-            st.dataframe(
-                st.session_state.emails_df,
-                use_container_width=True,
-                hide_index=True
-            )
+            st.dataframe(st.session_state.emails_df, use_container_width=True, hide_index=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ----------------------------
+# =========================================================
 # Qualify
-# ----------------------------
+# =========================================================
 with tab_qualify:
-    st.markdown("<div class='crg-card'>", unsafe_allow_html=True)
-    st.markdown("## Qualify")
-    st.markdown(f"<div class='crg-subtitle'>Filter down to the most useful inboxes. Export the final list as CSV.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='crg-card crg-card-strong'>", unsafe_allow_html=True)
+    st.markdown("<div class='crg-section-title'>Qualify</div>", unsafe_allow_html=True)
+    st.markdown("<div class='crg-section-sub'>Filter down to the most useful inboxes. Export the final list as CSV.</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
     emails_df = st.session_state.emails_df.copy()
@@ -989,28 +1014,33 @@ with tab_qualify:
         st.info("No emails found yet. Go to Discover and run a scan.")
         st.stop()
 
-    st.markdown("<div class='crg-card soft'>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
+    st.markdown("<div class='crg-card'>", unsafe_allow_html=True)
+    f1, f2, f3 = st.columns([1, 1, 1])
+    with f1:
         rel_filter = st.multiselect("Email relevance", ["High", "Medium", "Low"], ["High", "Medium"])
-    with col2:
+    with f2:
         org_filter = st.multiselect("Organisation type", sorted(emails_df["org_type"].dropna().unique().tolist()), [])
-    with col3:
-        geo_filter = st.multiselect("Geo hint", sorted(emails_df["geo_hint"].dropna().unique().tolist()),
-                                    ["UK"] if "UK" in emails_df["geo_hint"].unique() else [])
+    with f3:
+        geo_filter = st.multiselect(
+            "Geo hint",
+            sorted(emails_df["geo_hint"].dropna().unique().tolist()),
+            ["UK"] if "UK" in emails_df["geo_hint"].unique() else []
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
 
     filtered = emails_df[emails_df["email_relevance"].isin(rel_filter)]
     if org_filter:
         filtered = filtered[filtered["org_type"].isin(org_filter)]
     if geo_filter:
         filtered = filtered[filtered["geo_hint"].isin(geo_filter)]
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='crg-card soft'>", unsafe_allow_html=True)
+    st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='crg-card'>", unsafe_allow_html=True)
     st.dataframe(filtered, use_container_width=True, hide_index=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='crg-card soft'>", unsafe_allow_html=True)
+    st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='crg-card'>", unsafe_allow_html=True)
     st.markdown("### Export")
     csv_bytes = filtered.to_csv(index=False).encode("utf-8")
     st.download_button(
