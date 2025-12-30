@@ -89,7 +89,6 @@ TLD_GEO = {
 
 COMMON_FILE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".pdf", ".css", ".js", ".ico")
 
-# More realistic headers (reduces basic bot blocks)
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -97,7 +96,6 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
-# ---- Requests session with retries (fixes flakiness / 429 / transient 5xx)
 @st.cache_resource
 def get_http_session() -> requests.Session:
     session = requests.Session()
@@ -141,16 +139,9 @@ def geo_hint_from_domain(dom: str) -> str:
     return "Global / Unknown"
 
 def safe_get(url: str, timeout: int = 15) -> Tuple[str, str]:
-    """
-    Robust fetch:
-    - uses session + retries
-    - returns final_url + html text (or "" if not html)
-    - raises with readable reason when blocked / not reachable
-    """
     session = get_http_session()
     r = session.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
 
-    # Explicitly raise on common hard blocks so we can surface them in the UI
     if r.status_code >= 400:
         raise requests.HTTPError(f"HTTP {r.status_code} for {url} (final: {r.url})")
 
@@ -400,7 +391,6 @@ GUESS_PATHS = [
     "/media", "/press", "/advertise", "/advertising", "/brand", "/marketing",
     "/contact", "/contact-us", "/about", "/about-us", "/team", "/people",
     "/investor-relations", "/ir", "/institutional", "/corporate",
-    # WordPress-friendly variants
     "/contact/", "/about/", "/team/", "/partners/", "/partnerships/"
 ]
 
@@ -641,7 +631,6 @@ def scan_site(
     found_rows: List[Dict] = []
     visited: Set[str] = set()
 
-    # NEW: collect fetch errors so you can see what happened
     fetch_errors: List[str] = []
 
     try:
@@ -794,9 +783,8 @@ def scan_site(
         emails_final = list(dedup.values())
         emails_final.sort(key=lambda x: x["sponsor_fit_score"], reverse=True)
 
-        # NEW: surface some fetch errors if we got blocked
         if fetch_errors:
-            errors = "; ".join(fetch_errors[:3])  # keep it short
+            errors = "; ".join(fetch_errors[:3])
 
         return ScanResult(
             input_url=start_url,
@@ -844,7 +832,7 @@ def scan_site(
 
 st.set_page_config(page_title="CRG Email Scraping Tool", layout="wide")
 st.title("CRG Email Scraping Tool")
-st.caption("Paste company websites, scan, and retrieve email addresses")
+st.caption("Paste websites, scan, and pull out public contact emails")
 
 with st.sidebar:
     st.subheader("Scan controls")
@@ -909,13 +897,13 @@ with tab_discover:
     with colC:
         st.caption("Tip: start with a curated list (funds, banks, fintechs, consultancies, data providers).")
 
-if clear:
-    st.session_state.emails_df = pd.DataFrame()
-    st.session_state.companies_df = pd.DataFrame()
-    st.session_state.shortlist_df = pd.DataFrame()
-    st.session_state.has_scanned = False
-    st.session_state.last_scan_message = ""
-    st.success("Cleared.")
+    if clear:
+        st.session_state.emails_df = pd.DataFrame()
+        st.session_state.companies_df = pd.DataFrame()
+        st.session_state.shortlist_df = pd.DataFrame()
+        st.session_state.has_scanned = False
+        st.session_state.last_scan_message = ""
+        st.success("Cleared.")
 
     if run_scan:
         raw_urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
@@ -983,25 +971,22 @@ if clear:
         companies_df = pd.DataFrame(all_company_rows).drop_duplicates(subset=["domain"])
         emails_df = pd.DataFrame(all_email_rows)
 
+        st.session_state.companies_df = companies_df
+        st.session_state.emails_df = emails_df
         st.session_state.has_scanned = True
-        
+
         if emails_df.empty:
             st.session_state.last_scan_message = "Scan completed, but no emails were found (or pages were blocked). Check the errors column."
         else:
             st.session_state.last_scan_message = "Done. Use Qualify to filter down to the best contacts."
 
+    if st.session_state.has_scanned:
+        st.info(st.session_state.last_scan_message)
 
-        if emails_df.empty:
-            st.warning("Scan completed, but no emails were found (or pages were blocked). Check the errors column below.")
-        else:
-            st.success("Done. Use Qualify to filter down to the best contacts.")
-
-    # ✅ FIX: Always show scan snapshot + companies table if we scanned anything
-    if not st.session_state.companies_df.empty:
         st.markdown("### Scan snapshot")
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.metric("Domains scanned", int(st.session_state.companies_df.shape[0]))
+            st.metric("Domains scanned", int(st.session_state.companies_df.shape[0]) if not st.session_state.companies_df.empty else 0)
         with c2:
             st.metric("Emails kept", int(st.session_state.emails_df.shape[0]) if not st.session_state.emails_df.empty else 0)
         with c3:
@@ -1009,11 +994,20 @@ if clear:
         with c4:
             st.metric("Score ≥ 70", int((st.session_state.emails_df["sponsor_fit_score"] >= 70).sum()) if not st.session_state.emails_df.empty else 0)
 
-        st.dataframe(
-            st.session_state.companies_df.sort_values(["errors", "sponsor_language_hits"], ascending=[True, False]),
-            use_container_width=True,
-            hide_index=True
-        )
+        if not st.session_state.companies_df.empty:
+            st.dataframe(
+                st.session_state.companies_df.sort_values(["errors", "sponsor_language_hits"], ascending=[True, False]),
+                use_container_width=True,
+                hide_index=True
+            )
+
+        if not st.session_state.emails_df.empty:
+            st.markdown("### Emails found")
+            st.dataframe(
+                st.session_state.emails_df.sort_values(["sponsor_fit_score"], ascending=[False]),
+                use_container_width=True,
+                hide_index=True
+            )
 
 
 # ----------------------------
